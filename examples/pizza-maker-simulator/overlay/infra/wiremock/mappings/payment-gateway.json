@@ -1,0 +1,14 @@
+{
+  "metadata": {
+    "description": "Mock payment gateway for the pizza-maker-simulator example. Always approves."
+  },
+  "request": {
+    "method": "POST",
+    "urlPath": "/payments/charge"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": { "status": "APPROVED", "transactionId": "TXN-DEMO-0001" },
+    "headers": { "Content-Type": "application/json" }
+  }
+}

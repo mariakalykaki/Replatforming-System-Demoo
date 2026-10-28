@@ -1,0 +1,139 @@
+name: service
+
+services:
+  # --- Domain + regulatory state (app) and Temporal's internal state,
+  # sharing one Postgres instance locally via separate databases. ---
+  postgres:
+    image: docker.io/library/postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: appdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d appdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  adminer:
+    image: docker.io/library/adminer:latest
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # --- Temporal: owns orchestration state (timers, retries, workflow
+  # position). auto-setup runs schema migrations against postgres/temporal
+  # on every start, which is fine for local dev, not for production. ---
+  temporal:
+    image: docker.io/temporalio/auto-setup:1.29.5
+    restart: unless-stopped
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: app
+      POSTGRES_PWD: app
+      POSTGRES_SEEDS: postgres
+    ports:
+      - "7233:7233"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  temporal-ui:
+    image: docker.io/temporalio/ui:2.40.0
+    restart: unless-stopped
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8088:8080"
+    depends_on:
+      - temporal
+
+  # --- Notification / event pub-sub, separate from Temporal's own
+  # internal signalling. Single-node KRaft broker, no Zookeeper needed. ---
+  kafka:
+    image: docker.io/apache/kafka:3.9.0
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      # Internal (PLAINTEXT) and controller listeners bind to the container's
+      # own hostname rather than 0.0.0.0: Kafka derives an advertised address
+      # from the bind address for any listener not explicitly advertised, and
+      # refuses to advertise 0.0.0.0. Only the host-facing listener needs the
+      # wildcard bind, since it has to accept the docker/podman port mapping.
+      KAFKA_LISTENERS: PLAINTEXT://kafka:9092,CONTROLLER://kafka:9093,PLAINTEXT_HOST://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      - "9092:9094"
+
+  kafka-ui:
+    image: docker.io/provectuslabs/kafka-ui:latest
+    restart: unless-stopped
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports:
+      - "8089:8080"
+    depends_on:
+      - kafka
+
+  # --- Mock for whatever external system this service's Camel routes call
+  # out to (e.g. a central registry). Edit infra/wiremock/mappings/*.json. ---
+  wiremock:
+    image: docker.io/wiremock/wiremock:latest
+    restart: unless-stopped
+    command: ["--global-response-templating", "--verbose"]
+    ports:
+      - "8090:8080"
+    volumes:
+      - ./infra/wiremock/mappings:/home/wiremock/mappings:ro
+      - ./infra/wiremock/__files:/home/wiremock/__files:ro
+
+  # --- The service itself. Only buildable/runnable once there's a built
+  # jar — see Makefile (`make build` then `make up`). Not started by a
+  # plain `make up` on day one. ---
+  app:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: src/main/docker/Dockerfile.jvm
+    restart: unless-stopped
+    environment:
+      APP_DB_URL: jdbc:postgresql://postgres:5432/appdb
+      APP_DB_USER: app
+      APP_DB_PASSWORD: app
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: default
+      REGISTRY_BASE_URL: http://wiremock:8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+      kafka:
+        condition: service_started
+
+volumes:
+  pgdata:

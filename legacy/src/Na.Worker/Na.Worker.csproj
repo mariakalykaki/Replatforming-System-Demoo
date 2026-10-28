@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <UserSecretsId>na-worker-2d9e8b41-6a07-4f3c-8e52-91c4b7a3d0f6</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Na.Application\Na.Application.csproj" />
+    <ProjectReference Include="..\Na.Infrastructure\Na.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

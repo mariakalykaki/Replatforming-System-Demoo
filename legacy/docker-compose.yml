@@ -1,0 +1,19 @@
+# Local dev Oracle instance. Not for production use.
+# Start with: podman compose up -d  (or docker compose up -d)
+# Host port is 1522 so it can run alongside markella-mnp's Oracle on 1521.
+services:
+  oracle:
+    image: docker.io/gvenzl/oracle-free:23-slim
+    container_name: na-oracle
+    ports:
+      - "1522:1521"
+    environment:
+      ORACLE_PASSWORD: ${ORACLE_PASSWORD}
+      APP_USER: na_app
+      APP_USER_PASSWORD: ${APP_USER_PASSWORD}
+    volumes:
+      - na-oracle-data:/opt/oracle/oradata
+    restart: unless-stopped
+
+volumes:
+  na-oracle-data:

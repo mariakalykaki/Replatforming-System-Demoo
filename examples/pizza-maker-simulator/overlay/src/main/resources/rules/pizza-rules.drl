@@ -1,0 +1,59 @@
+package rules;
+
+import com.example.service.domain.PizzaOrder;
+import com.example.service.domain.PizzaItem;
+import com.example.service.domain.PizzaSize;
+import com.example.service.validation.StoreContext;
+import com.example.service.validation.OrderValidationResult;
+
+// --- Order validation ---
+
+rule "Order must contain at least one pizza"
+when
+    $result : OrderValidationResult()
+    $order : PizzaOrder(items == null || items.isEmpty())
+then
+    $result.reject("Order must contain at least one pizza.");
+end
+
+rule "Order must meet minimum value"
+when
+    $result : OrderValidationResult()
+    $order : PizzaOrder(totalPrice != null, totalPrice.doubleValue() < 10.00)
+then
+    $result.reject("Order total must be at least $10.00 (currently $" + $order.totalPrice + ").");
+end
+
+rule "Pizza can't have more than 6 toppings"
+when
+    $result : OrderValidationResult()
+    $item : PizzaItem(toppings != null, toppings.size() > 6)
+then
+    $result.reject("A pizza can have at most 6 toppings (one has " + $item.toppings.size() + ").");
+end
+
+rule "Stuffed crust isn't available on small pizzas"
+when
+    $result : OrderValidationResult()
+    $item : PizzaItem(size == PizzaSize.SMALL, toppings contains "stuffed-crust")
+then
+    $result.reject("Stuffed crust isn't available on small pizzas.");
+end
+
+// --- Store capacity / hours ---
+
+rule "Store is only open 11:00-22:00"
+when
+    $result : OrderValidationResult()
+    $ctx : StoreContext(now.isBefore(java.time.LocalTime.of(11, 0)) || now.isAfter(java.time.LocalTime.of(22, 0)))
+then
+    $result.reject("Store is closed. Online orders are accepted 11:00-22:00.");
+end
+
+rule "Kitchen is at capacity"
+when
+    $result : OrderValidationResult()
+    $ctx : StoreContext(kitchenLoad >= 5)
+then
+    $result.reject("Kitchen is at capacity (5 orders already in progress). Please try again shortly.");
+end

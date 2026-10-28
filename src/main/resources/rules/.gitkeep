@@ -1,0 +1,2 @@
+Put .drl rule files directly in this directory (it is the package the
+kmodule.xml KieBase scans). See docs/FIRST-STEPS.md for a worked example.

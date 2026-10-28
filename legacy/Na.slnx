@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Na.Api/Na.Api.csproj" />
+    <Project Path="src/Na.Application/Na.Application.csproj" />
+    <Project Path="src/Na.Infrastructure/Na.Infrastructure.csproj" />
+    <Project Path="src/Na.MockExternalApis/Na.MockExternalApis.csproj" />
+    <Project Path="src/Na.Worker/Na.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Na.Application.Tests/Na.Application.Tests.csproj" />
+    <Project Path="tests/Na.IntegrationTests/Na.IntegrationTests.csproj" />
+  </Folder>
+</Solution>

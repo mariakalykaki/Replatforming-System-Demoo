@@ -1,0 +1,14 @@
+{
+  "metadata": {
+    "description": "Placeholder so the mappings directory isn't empty. Delete this and add real stubs for whatever external system this service calls (e.g. a central registry). See docs/FIRST-STEPS.md."
+  },
+  "request": {
+    "method": "GET",
+    "url": "/__example/ping"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": { "status": "ok" },
+    "headers": { "Content-Type": "application/json" }
+  }
+}

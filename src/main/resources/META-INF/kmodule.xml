@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kmodule xmlns="http://www.drools.org/xsd/kmodule">
+    <!--
+      Declares one KieBase over everything under src/main/resources/rules/
+      and one stateless-friendly KieSession on top of it. Builds fine with
+      zero .drl files present — add your first rule file under rules/ and
+      it is picked up automatically, no changes needed here.
+    -->
+    <kbase name="serviceKBase" packages="rules" default="true">
+        <ksession name="serviceKSession" default="true"/>
+    </kbase>
+</kmodule>

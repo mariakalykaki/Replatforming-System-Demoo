@@ -1,0 +1,1 @@
+Put WireMock response body fixtures here, referenced from mappings/*.json via "bodyFileName".
